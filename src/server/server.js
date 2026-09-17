@@ -173,6 +173,110 @@ app.get('/public-usdc/supply', async (req, res) => {
   }
 });
 
+app.get('/all', async (req, res) => {
+  try {
+    const wallet = req.query.address || '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045';
+    if (!ethers.utils.isAddress(wallet)) {
+      return res.status(400).json({ error: 'Query parameter address must be a valid Ethereum address' });
+    }
+
+    const weth = new ethers.Contract(PUBLIC_WETH_ADDRESS, CONTRACT_ABI, provider);
+    const usdc = new ethers.Contract(PUBLIC_USDC_ADDRESS, SECOND_CONTRACT_ABI, provider);
+    const [
+      contractName,
+      contractSymbol,
+      contractSupply,
+      secondName,
+      secondSymbol,
+      secondDecimals,
+      secondSupply,
+      priceDescription,
+      priceDecimals,
+      roundData,
+      wethDecimals,
+      wethSymbol,
+      wethBalance,
+      usdcName,
+      usdcSymbol,
+      usdcDecimals,
+      usdcSupply,
+      blockNumber
+    ] = await Promise.all([
+      contract.name(),
+      contract.symbol(),
+      contract.totalSupply(),
+      secondContract.name(),
+      secondContract.symbol(),
+      secondContract.decimals(),
+      secondContract.totalSupply(),
+      chainlinkEthUsd.description(),
+      chainlinkEthUsd.decimals(),
+      chainlinkEthUsd.latestRoundData(),
+      weth.decimals(),
+      weth.symbol(),
+      weth.balanceOf(wallet),
+      usdc.name(),
+      usdc.symbol(),
+      usdc.decimals(),
+      usdc.totalSupply(),
+      provider.getBlockNumber()
+    ]);
+
+    res.json({
+      contract: {
+        contractAddress: CONTRACT_ADDRESS,
+        name: contractName,
+        symbol: contractSymbol,
+        totalSupply: ethers.utils.formatUnits(contractSupply, 18),
+        rawTotalSupply: contractSupply.toString()
+      },
+      secondContract: {
+        contractAddress: SECOND_CONTRACT_ADDRESS,
+        name: secondName,
+        symbol: secondSymbol,
+        decimals: secondDecimals,
+        totalSupply: ethers.utils.formatUnits(secondSupply, secondDecimals),
+        rawTotalSupply: secondSupply.toString()
+      },
+      chainlink: {
+        contractAddress: CHAINLINK_ETH_USD_ADDRESS,
+        description: priceDescription,
+        roundId: roundData.roundId.toString(),
+        price: ethers.utils.formatUnits(roundData.answer, priceDecimals),
+        updatedAt: new Date(roundData.updatedAt.toNumber() * 1000).toISOString(),
+        rawAnswer: roundData.answer.toString()
+      },
+      wethTest: {
+        contractAddress: PUBLIC_WETH_ADDRESS,
+        name: contractName,
+        symbol: contractSymbol,
+        decimals: wethDecimals,
+        totalSupply: ethers.utils.formatUnits(contractSupply, wethDecimals),
+        blockNumber,
+        source: 'Ethereum mainnet public WETH contract'
+      },
+      wethBalance: {
+        contractAddress: PUBLIC_WETH_ADDRESS,
+        address: wallet,
+        token: wethSymbol,
+        balance: ethers.utils.formatUnits(wethBalance, wethDecimals),
+        rawBalance: wethBalance.toString()
+      },
+      usdcSupply: {
+        contractAddress: PUBLIC_USDC_ADDRESS,
+        name: usdcName,
+        symbol: usdcSymbol,
+        decimals: usdcDecimals,
+        totalSupply: ethers.utils.formatUnits(usdcSupply, usdcDecimals),
+        rawTotalSupply: usdcSupply.toString()
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching all API data:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
   console.log(`Using contract: ${CONTRACT_ADDRESS}`);
