@@ -32,7 +32,7 @@ app.get('/contract', async (req, res) => {
       contractAddress: CONTRACT_ADDRESS,
       name,
       symbol,
-      totalSupply: ethers.formatUnits(totalSupply, 18),
+      totalSupply: ethers.utils.formatUnits(totalSupply, 18),
       rawTotalSupply: totalSupply.toString()
     };
 
@@ -48,13 +48,15 @@ app.get('/second-contract', async (req, res) => {
   try {
     const name = await secondContract.name();
     const symbol = await secondContract.symbol();
+    const decimals = await secondContract.decimals();
     const totalSupply = await secondContract.totalSupply();
 
     const result = {
       contractAddress: SECOND_CONTRACT_ADDRESS,
       name,
       symbol,
-      totalSupply: ethers.formatUnits(totalSupply, 18),
+      decimals,
+      totalSupply: ethers.utils.formatUnits(totalSupply, decimals),
       rawTotalSupply: totalSupply.toString()
     };
 
